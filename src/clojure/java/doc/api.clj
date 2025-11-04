@@ -30,6 +30,8 @@
   (print-signatures (javadoc-data-fn s param-tags)))
 
 (defmacro sigs
-  "print method signatures in param tags form"
+  "print method signatures in qualified method / param tags form
+   Examples:
+     (sigs String/valueOf)  ; Print all valueOf signatures"
   [class-or-method]
   `(sigs-fn ~(str class-or-method) '~(:param-tags (meta class-or-method))))

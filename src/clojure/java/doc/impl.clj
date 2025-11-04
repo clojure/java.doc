@@ -1,8 +1,10 @@
 (ns clojure.java.doc.impl
   (:require
-    [clojure.string :as str])
+    [clojure.string :as str]
+    [clojure.tools.deps :as deps])
   (:import [com.vladsch.flexmark.html2md.converter FlexmarkHtmlConverter]
-           [org.jsoup Jsoup]))
+           [org.jsoup Jsoup]
+           [java.util.jar JarFile]))
 
 (set! *warn-on-reflection* true)
 
@@ -15,14 +17,53 @@
                {:current-version version-str
                 :minimum-version min-version})))))
 
-(defn- javadoc-url [^String classname]
+(defn- find-jar-coords [jar-url-str]
+  (let [libs (:libs (deps/create-basis {:aliases []}))]
+    (first (for [[lib-sym lib-info] libs
+                 path (:paths lib-info)
+                 :when (str/includes? jar-url-str path)]
+             {:protocol :jar
+              :lib lib-sym
+              :version (select-keys lib-info [:mvn/version])}))))
+
+(defn- find-javadoc-coords [^Class c]
+  (let [class-name (.getName c)
+        url (.getResource c (str (.getSimpleName c) ".class"))]
+    (merge
+      {:class-name class-name}
+      (case (.getProtocol url)
+        "jar" (find-jar-coords (.toString url))
+        "jrt" {:protocol :jrt :lib 'java/java}
+        "file" nil))))
+
+(defn- download-javadoc-jar [{:keys [lib version]}]
+  (let [javadoc-lib (symbol (str lib "$javadoc"))
+        deps-map {:deps {javadoc-lib version} :mvn/repos (:mvn/repos (deps/root-deps))}
+        result (deps/resolve-deps deps-map {})]
+    (first (:paths (get result javadoc-lib)))))
+
+(defn- extract-html-from-jar [jar-path class-name]
+  (with-open [jar (JarFile. ^String jar-path)]
+    (if-let [entry (.getJarEntry jar (str (str/replace class-name "." "/") ".html"))]
+      (slurp (.getInputStream jar entry))
+      (throw (ex-info (str "Could not find HTML for class in javadoc jar: " class-name)
+                      {:class-name class-name :jar-path jar-path})))))
+
+(defn- javadoc-url [^String classname ^Class klass]
   (let [java-version (System/getProperty "java.specification.version")
-        _ (check-java-version java-version)
-        classname (str/replace classname #"\$.*" "")
-        klass (Class/forName classname)
         module-name (.getName (.getModule klass))
         url-path (.replace classname \. \/)]
+    (check-java-version java-version)
     (str "https://docs.oracle.com/en/java/javase/" java-version "/docs/api/" module-name "/" url-path ".html")))
+
+(defn- get-javadoc-html [^String classname]
+  (let [classname (str/replace classname #"\$.*" "")
+        klass (Class/forName classname)
+        coords (find-javadoc-coords klass)]
+    (case (:protocol coords)
+      :jar (extract-html-from-jar (download-javadoc-jar coords) classname)
+      :jrt (slurp (javadoc-url classname klass))
+      (throw (ex-info (str "No javadoc available for local class: " classname) {:class-name classname})))))
 
 (defn- html-to-md [^String html]
   (.convert ^FlexmarkHtmlConverter (.build (FlexmarkHtmlConverter/builder)) html))
@@ -130,9 +171,10 @@
   [s param-tags]
   (let [[class-part method-part] (str/split s #"/\.?" 2)
         class-name (resolve-class-name class-part)
-        doc (Jsoup/parse (slurp (javadoc-url class-name)))
-        class-desc-section (.selectFirst doc "section.class-description")
-        method-rows (.select doc "div.method-summary-table.col-second")
+        html (get-javadoc-html class-name)
+        doc (Jsoup/parse ^String html)
+        class-desc-section (.selectFirst ^org.jsoup.nodes.Document doc "section.class-description")
+        method-rows (.select ^org.jsoup.nodes.Document doc "div.method-summary-table.col-second")
         all-methods (vec (for [^org.jsoup.nodes.Element method-div method-rows]
                            (let [desc-div ^org.jsoup.nodes.Element (.nextElementSibling method-div)
                                  signature (.text (.select method-div "code"))
@@ -141,10 +183,9 @@
                                  is-static? (and modifier-html (str/includes? modifier-html "static"))]
                              {:signature signature
                               :description (.text (.select desc-div ".block"))
-                              :static? is-static?
-                              :clojure-call (clojure-call-syntax class-part signature is-static?)})))
-        class-html (.outerHtml class-desc-section)
-        result {:classname class-name
+                               :static? is-static?
+                               :clojure-call (clojure-call-syntax class-part signature is-static?)})))
+        class-html (.outerHtml ^org.jsoup.nodes.Element class-desc-section)        result {:classname class-name
                 :class-description-html class-html
                 :class-description-md (html-to-md class-html)
                 :methods all-methods}]

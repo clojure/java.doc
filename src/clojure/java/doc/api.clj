@@ -9,7 +9,8 @@
   (print-javadoc (javadoc-data-fn s param-tags)))
 
 (defmacro jdoc-data
-  "a map containg javadoc data for a class or method
+  "Returns a map containg javadoc data for a class or method.
+
    Examples:
      (jdoc-data String)                   ; Get class data
      (jdoc-data String/valueOf)           ; Get data for all valueOf overloads
@@ -18,7 +19,8 @@
   `(javadoc-data-fn ~(str class-or-method) '~(:param-tags (meta class-or-method))))
 
 (defmacro jdoc
-  "print javadoc for a class or method
+  "Print the javadoc html as markdown for a class or qualified method (with optional param-tags).
+
    Examples:
      (jdoc String)                    ; Print class description
      (jdoc String/valueOf)            ; Print all valueOf overloads
@@ -30,7 +32,8 @@
   (print-signatures (javadoc-data-fn s param-tags)))
 
 (defmacro sigs
-  "print method signatures in qualified method / param tags form
+  "Print method signatures in qualified method syntax with param tags.
+
    Examples:
      (sigs String/valueOf)  ; Print all valueOf signatures"
   [class-or-method]

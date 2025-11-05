@@ -157,7 +157,7 @@
       (str class-part separator method-name))))
 
 (defn parse-javadoc
-  "parse the javadoc HTML for a class or method into a data structure:
+  "Parse the javadoc HTML for a class or method into a data structure:
   {:classname 'java.lang.String'
    :class-description-html '...'
    :class-description-md '...'

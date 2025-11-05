@@ -1,6 +1,6 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.12.3"}
-        org.clojure/tools.deps {:mvn/version "0.20.1440"}
+        org.clojure/tools.deps {:mvn/version "0.26.1553"}
         com.vladsch.flexmark/flexmark-html2md-converter {:mvn/version "0.64.8"}
         org.jsoup/jsoup {:mvn/version "1.18.1"}}
  :aliases {:dev {:extra-paths ["test"]

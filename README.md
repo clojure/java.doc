@@ -1,14 +1,14 @@
-# clojure.java.doc
+# java.doc
 
-A Clojure library for accessing JDK javadocs in your REPL
+A Clojure library for accessing Javadocs in your REPL
 
 ## Installation
 
 ### deps.edn
 
 ```clojure
-{:deps {org.clojure/clojure.java.doc {:git/url "https://github.com/clojure/java.javadoc"
-                                      :git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"}}}
+{:deps {org.clojure/java.doc {:git/url "https://github.com/clojure/java.javadoc"
+                              :git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"}}}
 ```
 
 ### In the REPL with add-libs
@@ -19,9 +19,9 @@ For usage without modifying your project deps:
 ;; This require is only necessary if not in user namespace
 (require '[clojure.repl.deps :refer [add-lib]])
 
-(add-lib 'io.github.clojure/clojure.java.doc {:git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"})
+(add-lib 'io.github.clojure/java.doc {:git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"})
 
-(require '[clojure.java.doc.api :refer [jdoc jdoc-data]])
+(require '[clojure.java.doc.api :refer [jdoc jdoc-data sigs]])
 
 ;; Now you can use it
 (jdoc String)
@@ -32,7 +32,7 @@ For usage without modifying your project deps:
 Invoke directly from the command line, useful for piping into a .md file to display in your editor:
 
 ```bash
-clojure -Sdeps '{:deps {org.clojure/clojure.java.doc {:git/url "https://github.com/clojure/clojure.java.doc" :git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"}}}' \
+clojure -Sdeps '{:deps {org.clojure/java.doc {:git/url "https://github.com/clojure/java.doc" :git/sha "54ada3611e1372ad30b03112f5b7c16ea8f47bbc"}}}' \
   -M -e "(require '[clojure.java.doc.api :refer [jdoc]]) (jdoc String)"
 ```
 
@@ -42,10 +42,10 @@ The core namespace provides three functions:
 
 ### jdoc
 
-Prints a markdown formatted version of the javadoc description:
+Print Javadoc HTML as Markdown for a class or qualified method (with optional param-tags).
 
 ```clojure
-(require '[clojure.java.doc.api :refer [jdoc jdoc-data]])
+(require '[clojure.java.doc.api :refer [jdoc jdoc-data sigs]])
 
 ;; Print class description
 (jdoc String)
@@ -62,7 +62,7 @@ Prints a markdown formatted version of the javadoc description:
 
 ### sigs
 
-Prints the method signatures in param tags form:
+Print method signatures in qualified method syntax with param tags.
 
 ```clojure
 (sigs String/valueOf)
@@ -79,7 +79,7 @@ Prints the method signatures in param tags form:
 
 ### jdoc-data
 
-Returns structured data instead of printing:
+Returns all the structured data instead of printing the description.
 
 ```clojure
 (jdoc-data String)
@@ -108,7 +108,6 @@ Returns structured data instead of printing:
 ## Requirements
 
 - Java 17+
-- Internet required to fetch html javadocs from docs.oracle.com
 
 ## Copyright and License
 

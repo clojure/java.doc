@@ -1,6 +1,7 @@
 (ns clojure.java.doc.impl
   (:require
     [clojure.string :as str]
+    [clojure.java.basis :as basis]
     [clojure.tools.deps :as deps])
   (:import [com.vladsch.flexmark.html2md.converter FlexmarkHtmlConverter]
            [org.jsoup Jsoup]
@@ -18,7 +19,7 @@
                 :minimum-version min-version})))))
 
 (defn- find-jar-coords [jar-url-str]
-  (let [libs (:libs (deps/create-basis {:aliases []}))]
+  (let [libs (:libs (basis/current-basis))]
     (first (for [[lib-sym lib-info] libs
                  path (:paths lib-info)
                  :when (str/includes? jar-url-str path)]

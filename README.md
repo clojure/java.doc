@@ -66,17 +66,24 @@ Print method signatures in qualified method syntax with param tags.
 
 ```clojure
 (sigs String/valueOf)
-;; => ^[boolean] String/valueOf
-;;    ^[char] String/valueOf
-;;    ^[char/1] String/valueOf
-;;    ^[char/1 int int] String/valueOf
-;;    ^[double] String/valueOf
-;;    ^[float] String/valueOf
-;;    ^[int] String/valueOf
-;;    ^[long] String/valueOf
-;;    ^[Object] String/valueOf
+;; ^[boolean] String/valueOf
+;; ^[char] String/valueOf
+;; ^[char/1] String/valueOf
+;; ^[char/1 int int] String/valueOf
+;; ^[double] String/valueOf
+;; ...
 ```
 
+```clojure
+(sigs java.util.UUID)
+;; java.util.UUID/.clockSequence
+;; ^[UUID] java.util.UUID/.compareTo
+;; ^[Object] java.util.UUID/.equals
+;; ^[String] java.util.UUID/fromString
+;; java.util.UUID/.getLeastSignificantBits
+;; java.util.UUID/.getMostSignificantBits
+;; ...
+```
 ### jdoc-data
 
 Returns all the structured data instead of printing the description.

@@ -186,9 +186,10 @@
                               :description (.text (.select desc-div ".block"))
                                :static? is-static?
                                :clojure-call (clojure-call-syntax class-part signature is-static?)})))
-        class-html (.outerHtml ^org.jsoup.nodes.Element class-desc-section)        result {:classname class-name
+        class-html (when class-desc-section (.outerHtml ^org.jsoup.nodes.Element class-desc-section))
+        result {:classname class-name
                 :class-description-html class-html
-                :class-description-md (html-to-md class-html)
+                :class-description-md (when class-html (html-to-md class-html))
                 :methods all-methods}]
     (if method-part
       (let [filtered (filter-methods all-methods method-part param-tags)]
@@ -196,14 +197,19 @@
                (mapv #(get-method-detail doc %) filtered)))
       result)))
 
-(defn print-javadoc [{:keys [class-description-md selected-method]}]
-  (let [condense-lines (fn [s] (str/replace s #"\n{3,}" "\n\n"))]
-    (if selected-method
-      (doseq [{:keys [method-description-md]} selected-method]
-        (println (condense-lines method-description-md)))
-      (println (condense-lines class-description-md)))))
+  (defn print-javadoc [{:keys [classname class-description-md selected-method]}]
+    (let [condense-lines (fn [s] (str/replace s #"\n{3,}" "\n\n"))]
+      (cond
+        selected-method (doseq [{:keys [method-description-md]} selected-method]
+                          (if method-description-md
+                            (println (condense-lines method-description-md))
+                            (println "No javadoc description available for this method.")))
+        class-description-md (println (condense-lines class-description-md))
+        :else (println (str "No javadoc description available for class: " classname)))))
 
-(defn print-signatures [{:keys [methods selected-method]}]
+(defn print-signatures [{:keys [classname methods selected-method]}]
   (let [methods-to-print (or selected-method methods)]
-    (doseq [{:keys [clojure-call]} methods-to-print]
-      (println clojure-call))))
+    (if (seq methods-to-print)
+      (doseq [{:keys [clojure-call]} methods-to-print]
+        (println clojure-call))
+      (println (str "No method signatures available for: " classname)))))

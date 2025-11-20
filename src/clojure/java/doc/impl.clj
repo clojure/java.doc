@@ -96,16 +96,46 @@
       (mapv #(first (str/split (str/trim %) #"\s+"))
             (str/split params-no-generics #",")))))
 
+(defn- extract-id-params
+  "Extract parameter types from section ID:
+    run(java.util.Map,java.util.Set) -> [java.util.Map java.util.Set]"
+  [id method-name]
+  (when (and (str/starts-with? id (str method-name "("))
+             (str/ends-with? id ")"))
+    (let [params-str (subs id (inc (count method-name)) (dec (count id)))]
+      (if (str/blank? params-str)
+        []
+        (str/split params-str #",")))))
+
+(defn- params-match-id?
+  "Check if extracted param types match the ID params handles both simple and fully qualified names"
+  [param-types id-params]
+  (and (= (count param-types) (count id-params))
+       (every? (fn [[param-type id-param]]
+                 (or (= param-type id-param)
+                     (str/ends-with? id-param (str "." param-type))
+                     (str/ends-with? id-param (str "$" param-type))))
+               (map vector param-types id-params))))
+
+(defn- find-method-section [^org.jsoup.nodes.Document doc method-name param-types]
+  (let [all-sections (.select doc "section[id]")
+        param-count (if param-types (count param-types) 0)]
+    (first
+      (for [^org.jsoup.nodes.Element section all-sections
+            :let [id (.attr section "id")
+                  id-params (extract-id-params id method-name)]
+            :when (and id-params
+                       (= param-count (count id-params))
+                       (params-match-id? param-types id-params))]
+        section))))
+
 (defn- get-method-detail [^org.jsoup.nodes.Document doc method]
   (let [method-signature (:signature method)
         method-name (first (str/split method-signature #"\("))
         param-types (extract-params method-signature)
-        method-id (if param-types
-                    (str method-name "(" (str/join "," param-types) ")")
-                    (str method-name "()"))
-        detail-section (.selectFirst doc (str "section[id='" method-id "']"))]
+        detail-section (find-method-section doc method-name param-types)]
     (if detail-section
-      (let [method-html (.outerHtml detail-section)]
+      (let [method-html (.outerHtml ^org.jsoup.nodes.Element detail-section)]
         (assoc method
           :method-description-html method-html
           :method-description-md (html-to-md method-html)))

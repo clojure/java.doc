@@ -103,7 +103,7 @@
     (is (= ["Map"] (#'sut/extract-params "transform(Map<String,List<Integer>> data)"))))
 
   (testing "multiple params with nested generics"
-    (is (= ["java.util.Map" "java.util.Map"] 
+    (is (= ["java.util.Map" "java.util.Map"]
            (#'sut/extract-params "run(java.util.Map<java.lang.String, ? extends OnnxTensorLike> inputs, java.util.Map<java.lang.String, ? extends OnnxValue> pinnedOutputs)"))))
 
   (testing "array types"
@@ -248,3 +248,151 @@
     (is (true? (#'sut/params-match? ["int" "String"] '[int _])))
     (is (false? (#'sut/params-match? ["int" "String"] '[_])))
     (is (true? (#'sut/params-match? ["CharSequence..." "CharSequence..."] '[_ CharSequence/1])))))
+
+(deftest extract-id-params-test
+
+  (testing "no parameters"
+    (is (= [] (#'sut/extract-id-params "valueOf()" "valueOf"))))
+
+  (testing "single parameter"
+    (is (= ["int"] (#'sut/extract-id-params "valueOf(int)" "valueOf"))))
+
+  (testing "single fully qualified parameter"
+    (is (= ["java.lang.String"] (#'sut/extract-id-params "valueOf(java.lang.String)" "valueOf"))))
+
+  (testing "multiple simple parameters"
+    (is (= ["int" "int"] (#'sut/extract-id-params "substring(int,int)" "substring"))))
+
+  (testing "multiple fully qualified parameters"
+    (is (= ["java.util.Map" "java.util.Set"] (#'sut/extract-id-params "run(java.util.Map,java.util.Set)" "run"))))
+
+  (testing "array parameters"
+    (is (= ["char[]"] (#'sut/extract-id-params "valueOf(char[])" "valueOf"))))
+
+  (testing "mixed simple and qualified parameters"
+    (is (= ["java.util.Map" "int"] (#'sut/extract-id-params "process(java.util.Map,int)" "process"))))
+
+  (testing "inner class parameters with dot separator"
+    (is (= ["ai.onnxruntime.OrtSession.RunOptions"]
+           (#'sut/extract-id-params "run(ai.onnxruntime.OrtSession.RunOptions)" "run"))))
+
+  (testing "non-matching method name returns nil"
+    (is (nil? (#'sut/extract-id-params "valueOf(int)" "substring")))))
+
+(deftest params-match-id-test
+
+  (testing "exact match with simple types"
+    (is (true? (#'sut/params-match-id? ["int"] ["int"])))
+    (is (true? (#'sut/params-match-id? ["int" "String"] ["int" "String"]))))
+
+  (testing "simple type matches fully qualified type"
+    (is (true? (#'sut/params-match-id? ["String"] ["java.lang.String"])))
+    (is (true? (#'sut/params-match-id? ["Map"] ["java.util.Map"])))
+    (is (true? (#'sut/params-match-id? ["Set"] ["java.util.Set"]))))
+
+  (testing "multiple params with mixed simple and qualified"
+    (is (true? (#'sut/params-match-id? ["Map" "Set"] ["java.util.Map" "java.util.Set"])))
+    (is (true? (#'sut/params-match-id? ["String" "int"] ["java.lang.String" "int"]))))
+
+  (testing "array types match"
+    (is (true? (#'sut/params-match-id? ["char[]"] ["char[]"])))
+    (is (true? (#'sut/params-match-id? ["String[]"] ["java.lang.String[]"]))))
+
+  (testing "inner class with dot separator"
+    (is (true? (#'sut/params-match-id? ["OrtSession.RunOptions"] ["ai.onnxruntime.OrtSession.RunOptions"]))))
+
+  (testing "simple inner class name matches fully qualified"
+    (is (true? (#'sut/params-match-id? ["RunOptions"] ["ai.onnxruntime.OrtSession.RunOptions"]))))
+
+  (testing "wrong type does not match"
+    (is (false? (#'sut/params-match-id? ["int"] ["String"])))
+    (is (false? (#'sut/params-match-id? ["Map"] ["java.util.Set"]))))
+
+  (testing "wrong count does not match"
+    (is (false? (#'sut/params-match-id? ["int"] ["int" "String"])))
+    (is (false? (#'sut/params-match-id? ["int" "String"] ["int"]))))
+
+  (testing "empty params match"
+    (is (true? (#'sut/params-match-id? [] [])))))
+
+(deftest find-method-section-test
+
+  (testing "finds method with simple type parameters"
+    (let [html "<html><body>
+                <section id='valueOf(int)'>
+                  <h3>valueOf</h3>
+                </section>
+                <section id='valueOf(char[])'>
+                  <h3>valueOf</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          section-int (#'sut/find-method-section doc "valueOf" ["int"])
+          section-char-array (#'sut/find-method-section doc "valueOf" ["char[]"])]
+      (is (= "valueOf(int)" (.attr section-int "id")))
+      (is (= "valueOf(char[])" (.attr section-char-array "id")))))
+
+  (testing "finds method with fully qualified type parameters"
+    (let [html "<html><body>
+                <section id='run(java.util.Map)'>
+                  <h3>run</h3>
+                </section>
+                <section id='run(java.util.Map,java.util.Set)'>
+                  <h3>run</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          section-map (#'sut/find-method-section doc "run" ["Map"])
+          section-map-set (#'sut/find-method-section doc "run" ["Map" "Set"])]
+      (is (= "run(java.util.Map)" (.attr section-map "id")))
+      (is (= "run(java.util.Map,java.util.Set)" (.attr section-map-set "id")))))
+
+  (testing "finds method with no parameters, nil from extract-params"
+    (let [html "<html><body>
+                <section id='length()'>
+                  <h3>length</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          section (#'sut/find-method-section doc "length" nil)]
+      (is (= "length()" (.attr section "id")))))
+
+  (testing "finds method with no parameters, empty vector"
+    (let [html "<html><body>
+                <section id='toString()'>
+                  <h3>toString</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          section (#'sut/find-method-section doc "toString" [])]
+      (is (= "toString()" (.attr section "id")))))
+
+  (testing "returns nil when method not found"
+    (let [html "<html><body>
+                <section id='valueOf(int)'>
+                  <h3>valueOf</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)]
+      (is (nil? (#'sut/find-method-section doc "valueOf" ["String"])))
+      (is (nil? (#'sut/find-method-section doc "nonExistent" ["int"])))))
+
+  (testing "distinguishes between overloads with different param counts"
+    (let [html "<html><body>
+                <section id='run(java.util.Map)'>
+                  <h3>run</h3>
+                </section>
+                <section id='run(java.util.Map,java.util.Set)'>
+                  <h3>run</h3>
+                </section>
+                <section id='run(java.util.Map,java.util.Set,ai.onnxruntime.OrtSession.RunOptions)'>
+                  <h3>run</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          section-1 (#'sut/find-method-section doc "run" ["Map"])
+          section-2 (#'sut/find-method-section doc "run" ["Map" "Set"])
+          section-3 (#'sut/find-method-section doc "run" ["Map" "Set" "OrtSession.RunOptions"])]
+      (is (= "run(java.util.Map)" (.attr section-1 "id")))
+      (is (= "run(java.util.Map,java.util.Set)" (.attr section-2 "id")))
+      (is (= "run(java.util.Map,java.util.Set,ai.onnxruntime.OrtSession.RunOptions)" (.attr section-3 "id"))))))

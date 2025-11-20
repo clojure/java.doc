@@ -90,8 +90,21 @@
   (testing "no parameters"
     (is (nil? (#'sut/extract-params "length()"))))
 
-  (testing "type with generics"
-    (is (= ["List<String>"] (#'sut/extract-params "addAll(List<String> items)"))))
+  (testing "type with generics stripped"
+    (is (= ["List"] (#'sut/extract-params "addAll(List<String> items)"))))
+
+  (testing "generics with multiple type parameters"
+    (is (= ["java.util.Map"] (#'sut/extract-params "run(java.util.Map<java.lang.String, ? extends OnnxTensorLike> inputs)"))))
+
+  (testing "multiple params with generics"
+    (is (= ["String" "Map" "int"] (#'sut/extract-params "process(String name, Map<K,V> data, int count)"))))
+
+  (testing "nested generics"
+    (is (= ["Map"] (#'sut/extract-params "transform(Map<String,List<Integer>> data)"))))
+
+  (testing "multiple params with nested generics"
+    (is (= ["java.util.Map" "java.util.Map"] 
+           (#'sut/extract-params "run(java.util.Map<java.lang.String, ? extends OnnxTensorLike> inputs, java.util.Map<java.lang.String, ? extends OnnxValue> pinnedOutputs)"))))
 
   (testing "array types"
     (is (= ["int[]"] (#'sut/extract-params "sort(int[] array)"))))

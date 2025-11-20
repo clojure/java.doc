@@ -74,17 +74,27 @@
     (.getName ^Class class-sym)
     (throw (ex-info (str "Cannot resolve class: " class-part) {:class-name class-part}))))
 
+(defn- strip-generics
+  "Strip generic type parameters: Map<K,V> -> Map"
+  [type-str]
+  (loop [result type-str]
+    (let [next (str/replace result #"<[^<>]*>" "")]
+      (if (= result next)
+        result
+        (recur next)))))
+
 (defn- extract-params
   "extract parameter types from a method signature: valueOf(char[] data) -> [char[]]"
   [signature]
   (let [params-str (->> signature
                         (drop-while #(not= % \())
-                                    rest
-                                    (take-while #(not= % \)))
-                        (apply str))]
-    (when-not (str/blank? params-str)
+                        rest
+                        (take-while #(not= % \)))
+                        (apply str))
+        params-no-generics (strip-generics params-str)]
+    (when-not (str/blank? params-no-generics)
       (mapv #(first (str/split (str/trim %) #"\s+"))
-            (str/split params-str #",")))))
+            (str/split params-no-generics #",")))))
 
 (defn- get-method-detail [^org.jsoup.nodes.Document doc method]
   (let [method-signature (:signature method)
@@ -123,7 +133,8 @@
       (and (= (count expanded-sig-types) (count expanded-param-strs))
            (every? (fn [[sig-type param-str]]
                      (or (= param-str "_")
-                         (= sig-type param-str)))
+                         (= sig-type param-str)
+                         (= (strip-generics sig-type) (strip-generics param-str))))
                    (map vector expanded-sig-types expanded-param-strs))))))
 
 (defn- method-matches? [signature method-name param-tags]
@@ -137,14 +148,15 @@
 (defn- compress-array-syntax
   "java to clojure param-tag syntax: String[][] -> String/2"
   [java-type]
-  (cond
-    ;; arrays: String[][] -> String/2
-    (str/includes? java-type "[]") (let [base-type (str/replace java-type #"\[\]" "")
-                                         dims (count (re-seq #"\[" java-type))]
-                                     (str base-type "/" dims))
-    ;; varargs: Object... -> Object/1
-    (str/ends-with? java-type "...") (str/replace java-type #"[.]{3}$" "/1")
-    :else java-type))
+  (let [raw-type (strip-generics java-type)]
+    (cond
+      ;; arrays: String[][] -> String/2
+      (str/includes? raw-type "[]") (let [base-type (str/replace raw-type #"\[\]" "")
+                                          dims (count (re-seq #"\[" raw-type))]
+                                      (str base-type "/" dims))
+      ;; varargs: Object... -> Object/1
+      (str/ends-with? raw-type "...") (str/replace raw-type #"[.]{3}$" "/1")
+      :else raw-type)))
 
 (defn- clojure-call-syntax
   "javadoc signature to clojure param-tag syntax: valueOf(char[] data) -> ^[char/1] String/valueOf"

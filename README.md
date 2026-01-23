@@ -97,6 +97,7 @@ Returns all the structured data instead of printing the description.
 ;;     :methods [{:signature "valueOf(int i)"
 ;;                :description "Returns the string representation..."
 ;;                :static? true
+;;                :return-type "String"
 ;;                :clojure-call "^[int] String/valueOf"}
 ;;               ...]}
 
@@ -108,6 +109,7 @@ Returns all the structured data instead of printing the description.
 ;;     :selected-method [{:signature "valueOf(char[] data)"
 ;;                        :description "Returns the string representation..."
 ;;                        :static? true
+;;                        :return-type "String"
 ;;                        :clojure-call "^[char/1] String/valueOf"
 ;;                        :method-description-html "..."
 ;;                        :method-description-md "..."}]}

@@ -188,6 +188,20 @@
       (str/ends-with? raw-type "...") (str/replace raw-type #"[.]{3}$" "/1")
       :else raw-type)))
 
+(defn- clojure-return-type
+  "Extract return type from modifier text and convert to Clojure type hint syntax: static char[] -> char/1"
+  [modifier-text]
+  (when modifier-text
+    (-> modifier-text
+        str/trim
+        (str/replace #"^(?:public|private|protected)\s+" "")
+        (str/replace #"^static\s+" "")
+        (str/replace #"^final\s+" "")
+        (str/replace #"^default\s+" "")
+        (str/replace #"^abstract\s+" "")
+        compress-array-syntax
+        str/trim)))
+
 (defn- clojure-call-syntax
   "javadoc signature to clojure param-tag syntax: valueOf(char[] data) -> ^[char/1] String/valueOf"
   [class-part method-signature is-static?]
@@ -222,12 +236,13 @@
                            (let [desc-div ^org.jsoup.nodes.Element (.nextElementSibling method-div)
                                  signature (.text (.select method-div "code"))
                                  modifier-div ^org.jsoup.nodes.Element (.previousElementSibling method-div)
-                                 modifier-html (when modifier-div (.html modifier-div))
-                                 is-static? (and modifier-html (str/includes? modifier-html "static"))]
+                                 modifier-text (when modifier-div (.text modifier-div))
+                                 is-static? (and modifier-text (str/includes? modifier-text "static"))]
                              {:signature signature
                               :description (.text (.select desc-div ".block"))
-                               :static? is-static?
-                               :clojure-call (clojure-call-syntax class-part signature is-static?)})))
+                              :static? is-static?
+                              :return-type (clojure-return-type modifier-text)
+                              :clojure-call (clojure-call-syntax class-part signature is-static?)})))
         class-html (when class-desc-section (.outerHtml ^org.jsoup.nodes.Element class-desc-section))
         result {:classname class-name
                 :class-description-html class-html

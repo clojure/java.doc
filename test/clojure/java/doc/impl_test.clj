@@ -130,6 +130,42 @@
     (is (= "int[]" (#'sut/expand-array-syntax "int[]")))
     (is (= "String[][]" (#'sut/expand-array-syntax "String[][]")))))
 
+(deftest clojure-return-type-test
+
+  (testing "simple types unchanged"
+    (is (= "String" (#'sut/clojure-return-type "String")))
+    (is (= "int" (#'sut/clojure-return-type "int")))
+    (is (= "void" (#'sut/clojure-return-type "void"))))
+
+  (testing "modifiers stripped"
+    (is (= "String" (#'sut/clojure-return-type "static String")))
+    (is (= "int" (#'sut/clojure-return-type "static int")))
+    (is (= "String" (#'sut/clojure-return-type "public static String")))
+    (is (= "String" (#'sut/clojure-return-type "static final String"))))
+
+  (testing "array types converted to clojure syntax"
+    (is (= "char/1" (#'sut/clojure-return-type "char[]")))
+    (is (= "char/1" (#'sut/clojure-return-type "static char[]")))
+    (is (= "String/1" (#'sut/clojure-return-type "String[]")))
+    (is (= "String/2" (#'sut/clojure-return-type "String[][]"))))
+
+  (testing "generic types stripped"
+    (is (= "List" (#'sut/clojure-return-type "List<String>")))
+    (is (= "List" (#'sut/clojure-return-type "static List<E>")))
+    (is (= "Map" (#'sut/clojure-return-type "Map<K,V>"))))
+
+  (testing "type parameter declarations stripped"
+    (is (= "List" (#'sut/clojure-return-type "<E> List<E>")))
+    (is (= "T/1" (#'sut/clojure-return-type "<T> T[]")))
+    (is (= "T" (#'sut/clojure-return-type "<T> T"))))
+
+  (testing "complex type parameter declarations with nested generics"
+    (is (= "T" (#'sut/clojure-return-type "<T extends Comparable<T>> T")))
+    (is (= "T" (#'sut/clojure-return-type "<T extends Object & Comparable<? super T>> T"))))
+
+  (testing "nil input"
+    (is (nil? (#'sut/clojure-return-type nil)))))
+
 (deftest compress-array-syntax-test
 
   (testing "primitive types unchanged"

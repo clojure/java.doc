@@ -175,6 +175,26 @@
 (defn- filter-methods [all-methods method-name param-tags]
   (filterv #(method-matches? (:signature %) method-name param-tags) all-methods))
 
+(defn- reflection-type-name [^Class c]
+  (if (.isArray c)
+    (str (reflection-type-name (.getComponentType c)) "[]")
+    (.getSimpleName c)))
+
+(defn- reflection-params-match? [^java.lang.reflect.Method method param-tags]
+  (let [param-type-names (mapv reflection-type-name (.getParameterTypes method))]
+    (params-match? param-type-names param-tags)))
+
+(defn- find-declaring-class [^String class-name method-name param-tags]
+  (let [klass (Class/forName class-name)
+        name-matches?      (fn [^java.lang.reflect.Method m] (= method-name (.getName m)))
+        inherited?         (fn [^java.lang.reflect.Method m] (not= class-name (.getName (.getDeclaringClass m))))
+        params-compatible? (fn [^java.lang.reflect.Method m] (or (nil? param-tags) (reflection-params-match? m param-tags)))
+        matching (->> (.getMethods klass)
+                      (filter (fn [^java.lang.reflect.Method m]
+                                (and (name-matches? m) (inherited? m) (params-compatible? m)))))]
+    (when-let [^java.lang.reflect.Method method (first matching)]
+      (.getName (.getDeclaringClass method)))))
+
 (defn- compress-array-syntax
   "java to clojure param-tag syntax: String[][] -> String/2"
   [java-type]
@@ -249,9 +269,14 @@
                 :class-description-md (when class-html (html-to-md class-html))
                 :methods all-methods}]
     (if method-part
-      (let [filtered (filter-methods all-methods method-part param-tags)]
+      (let [filtered        (filter-methods all-methods method-part param-tags)
+            declaring-class (when (empty? filtered)
+                              (find-declaring-class class-name method-part param-tags))]
         (assoc result :selected-method
-               (mapv #(get-method-detail doc %) filtered)))
+               (cond
+                 (seq filtered) (mapv #(get-method-detail doc %) filtered)
+                 declaring-class (:selected-method (parse-javadoc (str declaring-class "/." method-part) param-tags))
+                 :else [])))
       result)))
 
   (defn print-javadoc [{:keys [classname class-description-md selected-method]}]

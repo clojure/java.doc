@@ -413,6 +413,37 @@
       (is (nil? (#'sut/find-method-section doc "valueOf" ["String"])))
       (is (nil? (#'sut/find-method-section doc "nonExistent" ["int"])))))
 
+(deftest reflection-type-name-test
+
+  (testing "primitive types"
+    (is (= "int" (#'sut/reflection-type-name Integer/TYPE)))
+    (is (= "boolean" (#'sut/reflection-type-name Boolean/TYPE)))
+    (is (= "char" (#'sut/reflection-type-name Character/TYPE)))
+    (is (= "long" (#'sut/reflection-type-name Long/TYPE))))
+
+  (testing "simple class"
+    (is (= "String" (#'sut/reflection-type-name String)))
+    (is (= "Object" (#'sut/reflection-type-name Object))))
+
+  (testing "single dimension array"
+    (is (= "int[]" (#'sut/reflection-type-name (Class/forName "[I"))))
+    (is (= "String[]" (#'sut/reflection-type-name (Class/forName "[Ljava.lang.String;")))))
+
+  (testing "multi dimensional array"
+    (is (= "int[][]" (#'sut/reflection-type-name (Class/forName "[[I"))))
+    (is (= "String[][]" (#'sut/reflection-type-name (Class/forName "[[Ljava.lang.String;"))))))
+
+(deftest find-declaring-class-test
+
+  (testing "inherited method found"
+    (is (= "java.util.zip.ZipEntry" (#'sut/find-declaring-class "java.util.jar.JarEntry" "getName" nil))))
+
+  (testing "directly declared method returns nil"
+    (is (nil? (#'sut/find-declaring-class "java.lang.String" "length" nil))))
+
+  (testing "nonexistent method returns nil"
+    (is (nil? (#'sut/find-declaring-class "java.lang.String" "totallyFakeMethod" nil)))))
+
   (testing "distinguishes between overloads with different param counts"
     (let [html "<html><body>
                 <section id='run(java.util.Map)'>

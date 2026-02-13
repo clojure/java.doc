@@ -444,6 +444,76 @@
   (testing "nonexistent method returns nil"
     (is (nil? (#'sut/find-declaring-class "java.lang.String" "totallyFakeMethod" nil)))))
 
+(deftest clojure-constructor-call-syntax-test
+
+  (testing "constructor with single parameter"
+    (is (= "^[Reader] PushbackReader/.new"
+           (#'sut/clojure-constructor-call-syntax "PushbackReader" "PushbackReader(Reader in)"))))
+
+  (testing "constructor with multiple parameters"
+    (is (= "^[Reader int] PushbackReader/.new"
+           (#'sut/clojure-constructor-call-syntax "PushbackReader" "PushbackReader(Reader in, int size)"))))
+
+  (testing "constructor with no parameters"
+    (is (= "StringBuilder/.new"
+           (#'sut/clojure-constructor-call-syntax "StringBuilder" "StringBuilder()"))))
+
+  (testing "constructor with array parameter"
+    (is (= "^[char/1] String/.new"
+           (#'sut/clojure-constructor-call-syntax "String" "String(char[] value)")))))
+
+(deftest get-constructor-detail-test
+
+  (testing "finds constructor detail by <init> section ID"
+    (let [html "<html><body>
+                <section id='&lt;init&gt;(java.io.Reader,int)'>
+                  <h3>PushbackReader</h3>
+                  <div class='member-signature'>
+                    <span>public PushbackReader(Reader in, int size)</span>
+                  </div>
+                  <div class='block'>Creates a new pushback reader with a pushback buffer of the given size.</div>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          constructor {:signature "PushbackReader(Reader in, int size)" :description "test"}
+          actual (#'sut/get-constructor-detail doc constructor)
+          expected-html "<section id=\"&lt;init&gt;(java.io.Reader,int)\">\n <h3>PushbackReader</h3>\n <div class=\"member-signature\">\n  <span>public PushbackReader(Reader in, int size)</span>\n </div>\n <div class=\"block\">\n  Creates a new pushback reader with a pushback buffer of the given size.\n </div>\n</section>"
+          expected-md "### PushbackReader {#<init>(java.io.Reader,int)}\n\npublic PushbackReader(Reader in, int size)  \nCreates a new pushback reader with a pushback buffer of the given size.\n"]
+      (is (= expected-html (:constructor-description-html actual)))
+      (is (= expected-md (:constructor-description-md actual)))
+      (is (= "PushbackReader(Reader in, int size)" (:signature actual)))))
+
+  (testing "returns original constructor when detail not found"
+    (let [html "<html><body>
+                <section id='&lt;init&gt;(java.io.Reader)'>
+                  <h3>PushbackReader</h3>
+                </section>
+                </body></html>"
+          doc (Jsoup/parse html)
+          constructor {:signature "PushbackReader(String s)" :description "test"}
+          actual (#'sut/get-constructor-detail doc constructor)]
+      (is (= constructor actual)))))
+
+(testing "finds constructor section with <init> ID"
+  (let [html "<html><body>
+        <section id='&lt;init&gt;(java.io.Reader)'>
+        <h3>PushbackReader</h3>
+        </section>
+        <section id='&lt;init&gt;(java.io.Reader,int)'>
+        <h3>PushbackReader</h3>
+        </section>
+        </body></html>"
+        doc (Jsoup/parse html)
+        section-1 (#'sut/find-method-section doc "<init>" ["Reader"])
+        section-2 (#'sut/find-method-section doc "<init>" ["Reader" "int"])]
+    (is (= "<init>(java.io.Reader)" (.attr section-1 "id")))
+    (is (= "<init>(java.io.Reader,int)" (.attr section-2 "id")))))
+
+(testing "parses <init> constructor IDs"
+  (is (= ["java.io.Reader" "int"] (#'sut/extract-id-params "<init>(java.io.Reader,int)" "<init>")))
+  (is (= ["java.io.Reader"] (#'sut/extract-id-params "<init>(java.io.Reader)" "<init>")))
+  (is (= [] (#'sut/extract-id-params "<init>()" "<init>"))))
+
   (testing "distinguishes between overloads with different param counts"
     (let [html "<html><body>
                 <section id='run(java.util.Map)'>

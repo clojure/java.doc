@@ -94,6 +94,10 @@ Returns all the structured data instead of printing the description.
 ;; => {:classname "java.lang.String"
 ;;     :class-description-html "..."
 ;;     :class-description-md "..."
+;;     :constructors [{:signature "String()"
+;;                     :description "Initializes a newly created String..."
+;;                     :clojure-call "String/new"}
+;;                    ...]
 ;;     :methods [{:signature "valueOf(int i)"
 ;;                :description "Returns the string representation..."
 ;;                :static? true
@@ -105,6 +109,7 @@ Returns all the structured data instead of printing the description.
 ;; => {:classname "java.lang.String"
 ;;     :class-description-html "..."
 ;;     :class-description-md "..."
+;;     :constructors [...]
 ;;     :methods [...]
 ;;     :selected-method [{:signature "valueOf(char[] data)"
 ;;                        :description "Returns the string representation..."
@@ -113,6 +118,19 @@ Returns all the structured data instead of printing the description.
 ;;                        :clojure-call "^[char/1] String/valueOf"
 ;;                        :method-description-html "..."
 ;;                        :method-description-md "..."}]}
+
+(jdoc-data String/new)
+;; => {:classname "java.lang.String"
+;;     :class-description-html "..."
+;;     :class-description-md "..."
+;;     :constructors [...]
+;;     :methods [...]
+;;     :selected-constructor [{:signature "String()"
+;;                             :description "Initializes a newly created String..."
+;;                             :clojure-call "String/.new"
+;;                             :constructor-description-html "..."
+;;                             :constructor-description-md "..."}
+;;                            ...]}
 ```
 
 ## Requirements

@@ -141,6 +141,16 @@
           :method-description-md (html-to-md method-html)))
       method)))
 
+(defn- get-constructor-detail [^org.jsoup.nodes.Document doc constructor]
+  (let [param-types (extract-params (:signature constructor))
+        detail-section (find-method-section doc "<init>" param-types)]
+    (if detail-section
+      (let [html (.outerHtml ^org.jsoup.nodes.Element detail-section)]
+        (assoc constructor
+          :constructor-description-html html
+          :constructor-description-md (html-to-md html)))
+      constructor)))
+
 (defn- expand-array-syntax
   "expands array syntax for matching javadoc format: String/2 -> String[][]"
   [type-str]
@@ -233,6 +243,11 @@
         (str "^[" (str/join " " clojure-types) "] " class-part separator method-name))
       (str class-part separator method-name))))
 
+(defn- clojure-constructor-call-syntax [class-part constructor-signature]
+  (let [param-types (extract-params constructor-signature)
+        prefix (when param-types (str "^[" (str/join " " (mapv compress-array-syntax param-types)) "] "))]
+    (str prefix class-part "/.new")))
+
 (defn parse-javadoc
   "Parse the javadoc HTML for a class or method into a data structure:
   {:classname 'java.lang.String'
@@ -263,25 +278,40 @@
                               :static? is-static?
                               :return-type (clojure-return-type modifier-text)
                               :clojure-call (clojure-call-syntax class-part signature is-static?)})))
+        constructor-rows (.select ^org.jsoup.nodes.Document doc "div.col-constructor-name")
+        all-constructors (vec (for [^org.jsoup.nodes.Element ctor-div constructor-rows]
+                                (let [desc-div ^org.jsoup.nodes.Element (.nextElementSibling ctor-div)
+                                      signature (.text (.select ctor-div "code"))]
+                                  {:signature signature
+                                   :description (.text (.select desc-div ".block"))
+                                   :clojure-call (clojure-constructor-call-syntax class-part signature)})))
         class-html (when class-desc-section (.outerHtml ^org.jsoup.nodes.Element class-desc-section))
         result {:classname class-name
                 :class-description-html class-html
                 :class-description-md (when class-html (html-to-md class-html))
-                :methods all-methods}]
-    (if method-part
-      (let [filtered        (filter-methods all-methods method-part param-tags)
-            declaring-class (when (empty? filtered)
-                              (find-declaring-class class-name method-part param-tags))]
-        (assoc result :selected-method
-               (cond
-                 (seq filtered) (mapv #(get-method-detail doc %) filtered)
-                 declaring-class (:selected-method (parse-javadoc (str declaring-class "/." method-part) param-tags))
-                 :else [])))
-      result)))
+                :methods all-methods
+                :constructors all-constructors}]
+    (cond
+      (nil? method-part) result
+      (= method-part "new") (let [filtered (if param-tags
+                                             (filterv #(params-match? (extract-params (:signature %)) param-tags) all-constructors)
+                                             all-constructors)]
+                              (assoc result :selected-constructor (mapv #(get-constructor-detail doc %) filtered)))
+      :else (let [filtered (filter-methods all-methods method-part param-tags)
+                  declaring-class (when (empty? filtered) (find-declaring-class class-name method-part param-tags))]
+              (assoc result :selected-method
+                     (cond
+                       (seq filtered) (mapv #(get-method-detail doc %) filtered)
+                       declaring-class (:selected-method (parse-javadoc (str declaring-class "/." method-part) param-tags))
+                       :else []))))))
 
-  (defn print-javadoc [{:keys [classname class-description-md selected-method]}]
+  (defn print-javadoc [{:keys [classname class-description-md selected-method selected-constructor]}]
     (let [condense-lines (fn [s] (str/replace s #"\n{3,}" "\n\n"))]
       (cond
+        selected-constructor (doseq [{:keys [constructor-description-md]} selected-constructor]
+                               (if constructor-description-md
+                                 (println (condense-lines constructor-description-md))
+                                 (println "No javadoc description available for this constructor.")))
         selected-method (doseq [{:keys [method-description-md]} selected-method]
                           (if method-description-md
                             (println (condense-lines method-description-md))
@@ -289,9 +319,9 @@
         class-description-md (println (condense-lines class-description-md))
         :else (println (str "No javadoc description available for class: " classname)))))
 
-(defn print-signatures [{:keys [classname methods selected-method]}]
-  (let [methods-to-print (or selected-method methods)]
-    (if (seq methods-to-print)
-      (doseq [{:keys [clojure-call]} methods-to-print]
+(defn print-signatures [{:keys [classname methods constructors selected-method selected-constructor]}]
+  (let [items-to-print (or selected-method selected-constructor (concat constructors methods))]
+    (if (seq items-to-print)
+      (doseq [{:keys [clojure-call]} items-to-print]
         (println clojure-call))
       (println (str "No method signatures available for: " classname)))))

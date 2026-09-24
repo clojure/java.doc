@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.clojure</groupId>
   <artifactId>java.doc</artifactId>
-  <version>0.1.6</version>
+  <version>0.1.7-SNAPSHOT</version>
   <name>java.doc</name>
   <description>A Clojure library for accessing Javadocs in your REPL.</description>
 
@@ -53,6 +53,6 @@
     <connection>scm:git:git@github.com:clojure/java.doc.git</connection>
     <developerConnection>scm:git:git@github.com:clojure/java.doc.git</developerConnection>
     <url>git@github.com:clojure/java.doc.git</url>
-    <tag>v0.1.6</tag>
+    <tag>HEAD</tag>
   </scm>
 </project>

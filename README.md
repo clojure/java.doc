@@ -6,10 +6,16 @@ A Clojure library for accessing Javadocs in your REPL
 
 ### deps.edn
 
+As a Maven dep:
+
 ```clojure
-{:deps {org.clojure/java.doc {:git/url "https://github.com/clojure/java.doc"
-                              :git/tag "v0.1.5"
-                              :git/sha "11f6dfb"}}}
+{:deps {io.github.clojure/java.doc {:mvn/version "0.1.6"}}}
+```
+
+As a git dep:
+
+```clojure
+{:deps {io.github.clojure/java.doc {:git/tag "v0.1.6" :git/sha "1400bf7"}}}
 ```
 
 ### In the REPL with add-libs
@@ -20,7 +26,7 @@ For usage without modifying your project deps:
 ;; This require is only necessary if not in user namespace
 (require '[clojure.repl.deps :refer [add-lib]])
 
-(add-lib 'io.github.clojure/java.doc {:git/tag "v0.1.5" :git/sha "11f6dfb"})
+(add-lib 'io.github.clojure/java.doc {:mvn/version "0.1.6"})
 
 (require '[clojure.java.doc.api :refer [jdoc jdoc-data sigs]])
 
@@ -33,7 +39,7 @@ For usage without modifying your project deps:
 Invoke directly from the command line, useful for piping into a .md file to display in your editor:
 
 ```bash
-clojure -Sdeps '{:deps {org.clojure/java.doc {:git/url "https://github.com/clojure/java.doc" :git/tag "v0.1.5" :git/sha "11f6dfb"}}}' \
+clojure -Sdeps '{:deps {io.github.clojure/java.doc {:mvn/version "0.1.6"}}}' \
   -M -e "(require '[clojure.java.doc.api :refer [jdoc]]) (jdoc String)"
 ```
 

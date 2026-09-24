@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.github.clojure</groupId>
+  <artifactId>java.doc</artifactId>
+  <version>0.1.5-SNAPSHOT</version>
+  <name>java.doc</name>
+  <description>A Clojure library for accessing Javadocs in your REPL.</description>
+
+  <parent>
+    <groupId>org.clojure</groupId>
+    <artifactId>pom.contrib</artifactId>
+    <version>1.4.3</version>
+  </parent>
+
+  <developers>
+    <developer>
+      <name>Jarrod Taylor</name>
+    </developer>
+  </developers>
+
+  <properties>
+    <clojure.version>1.12.3</clojure.version>
+    <clojure.warnOnReflection>true</clojure.warnOnReflection>
+    <clojure.source.dir>src</clojure.source.dir>
+    <clojure.testSource.dir>test</clojure.testSource.dir>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>${clojure.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.deps</artifactId>
+      <version>0.31.1642</version>
+    </dependency>
+    <dependency>
+      <groupId>com.vladsch.flexmark</groupId>
+      <artifactId>flexmark-html2md-converter</artifactId>
+      <version>0.64.8</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.18.1</version>
+    </dependency>
+  </dependencies>
+
+  <scm>
+    <connection>scm:git:git@github.com:clojure/java.doc.git</connection>
+    <developerConnection>scm:git:git@github.com:clojure/java.doc.git</developerConnection>
+    <url>git@github.com:clojure/java.doc.git</url>
+    <tag>HEAD</tag>
+  </scm>
+</project>

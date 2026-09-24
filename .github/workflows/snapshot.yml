@@ -1,0 +1,11 @@
+name: Snapshot on demand
+
+permissions:
+  contents: read
+
+on: [workflow_dispatch]
+
+jobs:
+  call-snapshot:
+    uses: clojure/build.ci/.github/workflows/snapshot.yml@master
+    secrets: inherit

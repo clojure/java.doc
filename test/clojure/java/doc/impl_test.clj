@@ -32,9 +32,7 @@
  <div class=\"member-signature\">
   <span>public static String valueOf(int i)</span>
  </div>
- <div class=\"block\">
-  Returns the string representation of the int argument.
- </div>
+ <div class=\"block\">Returns the string representation of the int argument.</div>
 </section>"]
      (is (= "valueOf(int i)" (:signature actual)))
      (is (= "test" (:description actual)))
@@ -48,9 +46,7 @@
  <div class=\"member-signature\">
   <span>public static String valueOf(char[] data)</span>
  </div>
- <div class=\"block\">
-  Returns the string representation of the char array argument.
- </div>
+ <div class=\"block\">Returns the string representation of the char array argument.</div>
 </section>"]
           (is (= "valueOf(char[] data)" (:signature actual)))
            (is (= "test" (:description actual)))
